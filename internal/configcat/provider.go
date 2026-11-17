@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -27,7 +28,10 @@ const (
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &configCatProvider{}
+var (
+	_ provider.Provider                       = &configCatProvider{}
+	_ provider.ProviderWithEphemeralResources = &configCatProvider{}
+)
 
 // configCatProvider defines the provider implementation.
 type configCatProvider struct {
@@ -163,6 +167,7 @@ func (p *configCatProvider) Configure(ctx context.Context, req provider.Configur
 
 	resp.DataSourceData = client
 	resp.ResourceData = client
+	resp.EphemeralResourceData = client
 }
 
 func (p *configCatProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -195,6 +200,13 @@ func (p *configCatProvider) DataSources(ctx context.Context) []func() datasource
 		NewTagDataSource,
 		NewPermissionGroupDataSource,
 		NewWebhookSigningKeysDataSource,
+	}
+}
+
+func (p *configCatProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		NewSdkKeyEphemeralResource,
+		NewWebhookSigningKeysEphemeralResource,
 	}
 }
 
