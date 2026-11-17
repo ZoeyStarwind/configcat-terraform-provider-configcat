@@ -19,11 +19,20 @@ func TestAccWebhookSigningKeysEphemeralResource(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),
 		},
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+		PreCheck: func() { testAccPreCheck(t) },
+		// The not-found step runs first: the post-test destroy uses the last step's config, which must be readable.
 		Steps: []resource.TestStep{
 			{
-				ConfigFile: config.TestNameFile("main.tf"),
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+				ConfigFile:               config.TestNameFile("main.tf"),
+				ConfigVariables: config.Variables{
+					"webhook_id": config.IntegerVariable(-1),
+				},
+				ExpectError: regexp.MustCompile(`Unable to read Webhook Signing Keys, got error: 404 Not Found`),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+				ConfigFile:               config.TestNameFile("main.tf"),
 				ConfigVariables: config.Variables{
 					"webhook_id": config.IntegerVariable(webhook1Id),
 				},
@@ -33,7 +42,8 @@ func TestAccWebhookSigningKeysEphemeralResource(t *testing.T) {
 				),
 			},
 			{
-				ConfigFile: config.TestNameFile("main.tf"),
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+				ConfigFile:               config.TestNameFile("main.tf"),
 				ConfigVariables: config.Variables{
 					"webhook_id": config.IntegerVariable(webhook2Id),
 				},
@@ -41,13 +51,6 @@ func TestAccWebhookSigningKeysEphemeralResource(t *testing.T) {
 					resource.TestCheckResourceAttr(testResourceName, "data."+WebhookSigningKeyKey1, "configcat_whsk_03svAq73DMZmYAHH5wErhNdOTXkKMnu5w6HQdqRetUU="),
 					resource.TestCheckResourceAttr(testResourceName, "data."+WebhookSigningKeyKey2, "configcat_whsk_Pfhcf/IiTTG8CraCDw7RmyxdUiZXyvKfvFQmh69Pe/4="),
 				),
-			},
-			{
-				ConfigFile: config.TestNameFile("main.tf"),
-				ConfigVariables: config.Variables{
-					"webhook_id": config.IntegerVariable(-1),
-				},
-				ExpectError: regexp.MustCompile(`Unable to read Webhook Signing Keys, got error: 404 Not Found`),
 			},
 		},
 	})

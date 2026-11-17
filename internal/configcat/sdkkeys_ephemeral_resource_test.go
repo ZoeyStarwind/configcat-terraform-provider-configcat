@@ -21,11 +21,21 @@ func TestAccSdkKeysEphemeralResource(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),
 		},
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+		PreCheck: func() { testAccPreCheck(t) },
+		// The not-found step runs first: the post-test destroy uses the last step's config, which must be readable.
 		Steps: []resource.TestStep{
 			{
-				ConfigFile: config.TestNameFile("main.tf"),
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+				ConfigFile:               config.TestNameFile("main.tf"),
+				ConfigVariables: config.Variables{
+					"config_id":      config.StringVariable(configId),
+					"environment_id": config.StringVariable(environment3Id),
+				},
+				ExpectError: regexp.MustCompile(`Unable to read SDK Keys, got error: 404 Not Found`),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+				ConfigFile:               config.TestNameFile("main.tf"),
 				ConfigVariables: config.Variables{
 					"config_id":      config.StringVariable(configId),
 					"environment_id": config.StringVariable(environment1Id),
@@ -36,7 +46,8 @@ func TestAccSdkKeysEphemeralResource(t *testing.T) {
 				),
 			},
 			{
-				ConfigFile: config.TestNameFile("main.tf"),
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+				ConfigFile:               config.TestNameFile("main.tf"),
 				ConfigVariables: config.Variables{
 					"config_id":      config.StringVariable(configId),
 					"environment_id": config.StringVariable(environment2Id),
@@ -45,14 +56,6 @@ func TestAccSdkKeysEphemeralResource(t *testing.T) {
 					resource.TestCheckResourceAttr(testResourceName, "data."+PrimarySdkKey, "Y23YCCEnpk2MBlhFIdUWvA/k-nG8bhE10K41sa8C2rYOQ"),
 					resource.TestCheckResourceAttr(testResourceName, "data."+SecondarySdkKey, "Y23YCCEnpk2MBlhFIdUWvA/q7dBIG43LkuX8NJbCeAzdg"),
 				),
-			},
-			{
-				ConfigFile: config.TestNameFile("main.tf"),
-				ConfigVariables: config.Variables{
-					"config_id":      config.StringVariable(configId),
-					"environment_id": config.StringVariable(environment3Id),
-				},
-				ExpectError: regexp.MustCompile(`Unable to read SDK Keys, got error: 404 Not Found`),
 			},
 		},
 	})
